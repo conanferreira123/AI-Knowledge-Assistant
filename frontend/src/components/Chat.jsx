@@ -23,7 +23,8 @@ function Chat() {
 
   const fileInputRef = useRef(null);
 
-  const handleUpload = async (e) => {
+//HandleUpload
+const handleUpload = async (e) => {
   const files = Array.from(e.target.files || []);
 
   if (files.length === 0) return;
@@ -77,6 +78,7 @@ function Chat() {
   e.target.value = '';
 };
 
+//LoadConversations
 const loadConversations = async () => {
   try {
     const data = await apiListConversations();
@@ -101,6 +103,7 @@ const createConversation = async () => {
   }
 };
 
+//OpenConversation
 const openConversation = async (id) => {
   try {
     const data = await apiConversationHistory(id);
@@ -169,6 +172,7 @@ const handleSend = async () => {
   }
 };
 
+//HandleLogin
 const handleLogin = () => {
   // Temporary frontend-only login
   if (!email.trim() || !password.trim()) return;
@@ -209,6 +213,7 @@ const initializeChat = async () => {
   }
 };
 
+//UseEffect
 useEffect(() => {
   if (initializedRef.current) return;   //so that InitializedRef mounts only once
 
@@ -217,6 +222,7 @@ useEffect(() => {
   initializeChat();
 }, []);
 
+//Main HTML:
   return (
     <div className="chat-page">
       {/* Left Sidebar */}
