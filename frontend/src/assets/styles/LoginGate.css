@@ -1,0 +1,82 @@
+/* Login Gate */
+
+.login-gate {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+}
+
+.login-card h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.5rem;
+  color: #0f172a;
+}
+
+.login-card p {
+  margin: 0 0 1.5rem;
+  color: #64748b;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.login-card input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #dbe3ee;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  outline: none;
+  background: #fff;
+}
+
+.login-card input:focus {
+  border-color: #2563eb;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.auth-buttons button {
+  flex: 1;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-buttons .login-btn {
+  border: none;
+  background: #0f172a;
+  color: #fff;
+}
+
+.auth-buttons .login-btn:hover {
+  background: #111827;
+}
+
+.auth-buttons .register-btn {
+  border: 1px solid #dbe3ee;
+  background: #fff;
+  color: #0f172a;
+}
+
+.auth-buttons .register-btn:hover {
+  background: #f8fafc;
+}

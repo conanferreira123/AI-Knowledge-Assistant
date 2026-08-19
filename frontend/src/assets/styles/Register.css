@@ -1,0 +1,90 @@
+.register-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    padding: 2rem;
+}
+
+.register-card {
+    width: 100%;
+    max-width: 430px;
+    background: white;
+    padding: 2.5rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 35px rgba(0, 0, 0, 0.08);
+}
+
+.register-card h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    text-align: center;
+}
+
+.register-subtitle {
+    margin: 0.7rem 0 2rem;
+    text-align: center;
+    color: #64748b;
+}
+
+.register-field {
+    margin-bottom: 1.2rem;
+}
+
+.register-field label {
+    display: block;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+}
+
+.register-field input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.85rem 1rem;
+    border: 1px solid #dbe3ee;
+    border-radius: 12px;
+    font-size: 1rem;
+    outline: none;
+}
+
+.register-field input:focus {
+    border-color: #94a3b8;
+}
+
+.register-error {
+    margin: 0 0 1rem;
+    color: #dc2626;
+    font-size: 0.9rem;
+}
+
+.register-submit {
+    width: 100%;
+    padding: 0.9rem;
+    border: none;
+    border-radius: 12px;
+    background: #0f172a;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.register-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.back-to-login {
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.8rem;
+    border: none;
+    background: transparent;
+    color: #475569;
+    cursor: pointer;
+}
+
+.back-to-login:hover {
+    color: #0f172a;
+}

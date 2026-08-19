@@ -1,1 +1,9 @@
 .env
+documents/
+vectorstore/
+db.sqlite3
+__pycache__/
+*.pyc
+migrations/
+migrations/__init__.py
+0001_initial.py

@@ -1,431 +1,677 @@
-import React, { useRef, useState,useEffect } from "react";
+import React, {
+  useRef,
+  useState,
+  useEffect,
+} from "react";
+
 import "../assets/styles/Chat.css";
-import { uploadDocument, sendChatMessage, apiCreateConversation, apiListConversations, apiConversationHistory, } from '../api/api.js';
+
+import {
+  uploadDocument,
+  sendChatMessage,
+  apiCreateConversation,
+  apiListConversations,
+  apiConversationHistory,
+  apiStartGuestSession,
+} from "../api/api.js";
+
+import {
+  useAuth,
+} from "../context/AuthContext.jsx";
+
+import { useNavigate } from "react-router-dom";
+
+// Child components
+import ChatSidebar from "./chat/ChatSidebar";
+import ChatTopbar from "./chat/ChatTopbar";
+import LoginGate from "./chat/LoginGate";
+import UploadArea from "./chat/UploadArea";
+import MessageList from "./chat/MessageList";
+import ChatInput from "./chat/ChatInput";
+import DocumentsSidebar from "./chat/DocumentSidebar";
+
 
 function Chat() {
-  const initializedRef = useRef(false); //to mount components only once to nullify the effect of ReactStrictMode.
-  const [conversationId, setConversationId] = useState(null); 
-  const [conversations, setConversations] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [docsOpen, setDocsOpen] = useState(false);
-  const [uploadedDocs, setUploadedDocs] = useState([]);
-  const [prompt, setPrompt] = useState("");
-
-  // New states
-  const [queryCount, setQueryCount] = useState(0);
-  const [showLoginGate, setShowLoginGate] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  // Chat history must be state now
-  const [messages, setMessages] = useState([]);
-
+  const initializedRef = useRef(false);
   const fileInputRef = useRef(null);
+  const alertTimeoutRef = useRef(null);
 
-//HandleUpload
-const handleUpload = async (e) => {
-  const files = Array.from(e.target.files || []);
+  const navigate = useNavigate();
 
-  if (files.length === 0) return;
+  // ==================================================
+  // State
+  // ==================================================
 
-  setDocsOpen(true);
+  const [conversationId, setConversationId] =
+    useState(null);
 
-  for (const file of files) {
-    // optimistic UI item
-    const tempId = `${file.name}-${Date.now()}`;
+  const [conversations, setConversations] =
+    useState([]);
 
-    setUploadedDocs((prev) => [
-      ...prev,
-      {
-        id: tempId,
-        name: file.name,
-        size: (file.size / 1024).toFixed(1),
-        status: 'Uploading...',
-      },
-    ]);
+  const [sidebarOpen, setSidebarOpen] =
+    useState(false);
 
-    try {
-      //conversationId=1; // Replace with the actual conversation ID you want to use
-      const result = await uploadDocument(conversationId, file);
+  const [docsOpen, setDocsOpen] =
+    useState(false);
 
-      setUploadedDocs((prev) =>
-        prev.map((doc) =>
-          doc.id === tempId
-            ? {
-                id: result.document.id,
-                name: result.document.title,
-                size: (file.size / 1024).toFixed(1),
-                status: result.document.status,
-              }
-            : doc
-        )
+  const [uploadedDocs, setUploadedDocs] =
+    useState([]);
+
+  const [uploadAlert, setUploadAlert] =
+    useState(null);
+
+  const [prompt, setPrompt] =
+    useState("");
+
+  // Guest query tracking
+  const [queryCount, setQueryCount] =
+    useState(0);
+
+  const [showLoginGate, setShowLoginGate] =
+    useState(false);
+
+  // Login form
+  const [email, setEmail] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  // Chat history
+  const [messages, setMessages] =
+    useState([]);
+
+
+  // ==================================================
+  // Authentication
+  // ==================================================
+
+  const {
+    user,
+    loading: authLoading,
+    isAuthenticated,
+    login,
+    logout
+  } = useAuth();
+
+
+  // ==================================================
+  // Handle Upload
+  // ==================================================
+
+  const handleUpload = async (e) => {
+    const files = Array.from(
+      e.target.files || []
+    );
+
+    if (files.length === 0) return;
+
+    if (!conversationId) {
+      console.error(
+        "No active conversation selected"
       );
-    } catch (err) {
-      console.error(err);
-
-      setUploadedDocs((prev) =>
-        prev.map((doc) =>
-          doc.id === tempId
-            ? { ...doc, status: 'Failed' }
-            : doc
-        )
-      );
-    }
-  }
-
-  // reset file input so the same file can be selected again
-  e.target.value = '';
-};
-
-//LoadConversations
-const loadConversations = async () => {
-  try {
-    const data = await apiListConversations();
-    setConversations(data.conversations || []);
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const createConversation = async () => {
-  try {
-    const result = await apiCreateConversation();
-
-    await loadConversations();
-
-    // Open the new conversation immediately
-    await openConversation(result.id);
-
-    return result;
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-//OpenConversation
-const openConversation = async (id) => {
-  try {
-    const data = await apiConversationHistory(id);
-
-    setConversationId(id);
-    setMessages(data.messages || []);
-    setUploadedDocs(data.documents || []);
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-const handleSend = async () => {
-  if (!prompt.trim()) return;
-  if (!conversationId) {
-      console.error('No active conversation selected');
       return;
     }
 
-  const nextCount = queryCount + 1;
+    setDocsOpen(true);
 
-  // Show login gate on the 4th query
-  if (!isLoggedIn && nextCount > 3) {
-    setShowLoginGate(true);
-    return;
-  }
+    if (alertTimeoutRef.current) {
+      clearTimeout(alertTimeoutRef.current);
+    }
+    setUploadAlert({ message: "Uploading...", type: "uploading" });
 
-  const userMessage = {
-    id: Date.now(),
-    role: 'user',
-    content: prompt,
-  };
+    let hasError = false;
 
-  // Show user message immediately
-  setMessages((prev) => [...prev, userMessage]);
+    for (const file of files) {
 
-  const currentPrompt = prompt;
-  setPrompt('');
+      // Optimistic UI item
+      const tempId =
+        `${file.name}-${Date.now()}`;
 
-  try {
-    const result = await sendChatMessage(conversationId,currentPrompt);
+      setUploadedDocs((prev) => [
+        ...prev,
+        {
+          id: tempId,
+          name: file.name,
+          size: (file.size / 1024).toFixed(1),
+          status: "Uploading...",
+        },
+      ]);
 
-    const assistantMessage = {
-      id: result.message_id,
-      role: 'assistant',
-      content: result.answer,
-      sources: result.sources || [],
-    };
+      try {
 
-    setMessages((prev) => [...prev, assistantMessage]);
+        const result =
+          await uploadDocument(
+            conversationId,
+            file
+          );
 
-    setQueryCount(nextCount);
+        setUploadedDocs((prev) =>
+          prev.map((doc) =>
+            doc.id === tempId
+              ? {
+                id: result.document.id,
+                name: result.document.title,
+                size: (
+                  file.size / 1024
+                ).toFixed(1),
+                status:
+                  result.document.status,
+              }
+              : doc
+          )
+        );
 
-  } catch (err) {
-    console.error(err);
+      } catch (err) {
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now() + 1,
-        role: 'assistant',
-        content: 'Sorry, something went wrong while contacting the server.',
-        sources: [],
-      },
-    ]);
-  }
-};
+        console.error(err);
+        hasError = true;
 
-//HandleLogin
-const handleLogin = () => {
-  // Temporary frontend-only login
-  if (!email.trim() || !password.trim()) return;
-
-  setIsLoggedIn(true);
-  setShowLoginGate(false);
-
-  // Optional: clear guest state after login
-  setMessages([]);
-  setUploadedDocs([]);
-  setQueryCount(0);
-
-  setEmail('');
-  setPassword('');
-
-  setSidebarOpen(false);
-  setDocsOpen(false);
-};
-
-const initializeChat = async () => {
-  try {
-    const data = await apiListConversations();
-
-    const existing = data.conversations || [];
-
-    setConversations(existing);
-
-    if (existing.length > 0) {
-      // Open the most recent conversation
-      await openConversation(existing[0].id);
-    } else {
-      // First visit: create a new conversation
-      await createConversation();
+        setUploadedDocs((prev) =>
+          prev.map((doc) =>
+            doc.id === tempId
+              ? {
+                ...doc,
+                status: "Failed",
+              }
+              : doc
+          )
+        );
+      }
     }
 
-  } catch (err) {
-    console.error(err);
+    if (hasError) {
+      setUploadAlert({ message: "Upload failed! ❌", type: "error" });
+      alertTimeoutRef.current = setTimeout(() => {
+        setUploadAlert(null);
+      }, 4000);
+    } else {
+      setUploadAlert({ message: "Uploaded! ✅", type: "success" });
+      alertTimeoutRef.current = setTimeout(() => {
+        setUploadAlert(null);
+      }, 3500);
+    }
+
+    // Reset file input so the same
+    // file can be selected again
+    e.target.value = "";
+  };
+
+
+  // ==================================================
+  // Load Conversations
+  // ==================================================
+
+  const loadConversations = async () => {
+    try {
+
+      const data =
+        await apiListConversations();
+
+      setConversations(
+        data.conversations || []
+      );
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ==================================================
+  // Create Conversation
+  // ==================================================
+
+  const createConversation = async () => {
+    // Guest users cannot create another conversation
+    if (!isAuthenticated) {
+      setShowLoginGate(true);
+      return;
+    }
+
+    try {
+      const result = await apiCreateConversation();
+
+      await loadConversations();
+      await openConversation(result.id);
+
+      return result;
+    } catch (err) {
+      console.error("Create conversation failed:", err);
+    }
+  };
+
+
+  // ==================================================
+  // Open Conversation
+  // ==================================================
+
+  const openConversation = async (id) => {
+    try {
+
+      const data =
+        await apiConversationHistory(id);
+
+      setConversationId(id);
+
+      setMessages(
+        data.messages || []
+      );
+
+      setUploadedDocs(
+        (data.documents || []).map(
+          (doc) => ({
+            id: doc.id,
+            name: doc.title,
+            size: doc.file_size_kb ?? "",
+            status: doc.status,
+          })
+        )
+      );
+
+      if (data.query_count !== undefined) {
+        setQueryCount(data.query_count);
+      }
+
+      setShowLoginGate(false);
+
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+
+  // ==================================================
+  // Handle Send
+  // ==================================================
+
+  const handleSend = async () => {
+
+    if (!prompt.trim()) return;
+
+    if (!conversationId) {
+      console.error(
+        "No active conversation selected"
+      );
+      return;
+    }
+
+    const userMessage = {
+      id: Date.now(),
+      role: "user",
+      content: prompt,
+    };
+
+    // Show user message immediately
+    setMessages((prev) => [
+      ...prev,
+      userMessage,
+    ]);
+
+    const currentPrompt = prompt;
+
+    setPrompt("");
+
+    try {
+
+      const result =
+        await sendChatMessage(
+          conversationId,
+          currentPrompt
+        );
+
+      const assistantMessage = {
+        id: result.message_id,
+        role: "assistant",
+        content: result.answer,
+        sources: result.sources || [],
+      };
+
+      setMessages((prev) => [
+        ...prev,
+        assistantMessage,
+      ]);
+
+      // Update sidebar title immediately
+      if (result.title) {
+
+        setConversations((prev) =>
+          prev.map((conv) =>
+            conv.id ===
+              result.conversation_id
+              ? {
+                ...conv,
+                title: result.title,
+              }
+              : conv
+          )
+        );
+      }
+
+      if (result.query_count !== undefined) {
+        setQueryCount(result.query_count);
+      }
+
+    } catch (err) {
+
+      console.error(err);
+
+      if (
+        err.data?.guest_limit_reached ||
+        err.status === 403
+      ) {
+        setShowLoginGate(true);
+      }
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          role: "assistant",
+          content:
+            err.data?.message ||
+            "Sorry, something went wrong while contacting the server.",
+          sources: [],
+        },
+      ]);
+    }
+  };
+
+
+  // ==================================================
+  // Handle Register
+  // ==================================================
+
+  const handleRegister = () => {
+    navigate("/register");
+  };
+
+
+  // ==================================================
+  // Handle Login
+  // ==================================================
+
+  const handleLogin = async () => {
+
+    if (
+      !email.trim() ||
+      !password.trim()
+    ) {
+      return;
+    }
+
+    try {
+
+      const data = await login(
+        email.trim(),
+        password
+      );
+
+      setShowLoginGate(false);
+
+      setEmail("");
+      setPassword("");
+
+      setSidebarOpen(false);
+      setDocsOpen(false);
+
+      const listData = await apiListConversations();
+      const userConvs = listData.conversations || [];
+      setConversations(userConvs);
+
+      const targetId =
+        data?.migrated_conversation_id ||
+        (userConvs.length > 0 ? userConvs[0].id : null);
+
+      if (targetId) {
+        await openConversation(targetId);
+      } else {
+        await createConversation();
+      }
+
+    } catch (err) {
+
+      console.error(
+        "Login failed:",
+        err
+      );
+    }
+  };
+
+  // ==================================================
+  // Handle Logout
+  // ==================================================
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+
+      // Clear current chat UI state
+      setConversationId(null);
+      setConversations([]);
+      setMessages([]);
+      setUploadedDocs([]);
+      setQueryCount(0);
+      setShowLoginGate(false);
+
+      // Close sidebars
+      setSidebarOpen(false);
+      setDocsOpen(false);
+
+      // Return to landing page
+      navigate("/");
+
+    } catch (err) {
+      console.error("Logout failed:", err);
+    }
+  };
+
+
+  // ==================================================
+  // Initialize Chat
+  // ==================================================
+
+  const initializeChat = async () => {
+
+    try {
+
+      if (!isAuthenticated) {
+        // Guest mode: start/retrieve single guest session
+        const guestData = await apiStartGuestSession();
+
+        if (guestData && guestData.conversation_id) {
+          setConversations([
+            {
+              id: guestData.conversation_id,
+              title: guestData.title || "New Chat",
+            },
+          ]);
+          setQueryCount(guestData.query_count || 0);
+          await openConversation(guestData.conversation_id);
+        }
+      } else {
+        // Authenticated mode: load user's conversations
+        const data = await apiListConversations();
+        const existing = data.conversations || [];
+
+        setConversations(existing);
+
+        if (existing.length > 0) {
+          await openConversation(existing[0].id);
+        } else {
+          await createConversation();
+        }
+      }
+
+    } catch (err) {
+      console.error("Chat initialization failed:", err);
+    }
+  };
+
+
+  // ==================================================
+  // Initial Authentication +
+  // Chat Initialization
+  // ==================================================
+
+  useEffect(() => {
+
+    if (authLoading) {
+      return;
+    }
+
+    if (initializedRef.current) {
+      return;
+    }
+
+    initializedRef.current = true;
+
+    initializeChat();
+
+  }, [authLoading]);
+
+
+  // ==================================================
+  // Authentication Loading Screen
+  // ==================================================
+
+  if (authLoading) {
+
+    return (
+      <div className="chat-page">
+
+        <main className="chat-main">
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+            }}
+          >
+            Loading...
+          </div>
+
+        </main>
+
+      </div>
+    );
   }
-};
 
-//UseEffect
-useEffect(() => {
-  if (initializedRef.current) return;   //so that InitializedRef mounts only once
 
-  initializedRef.current = true;
+  // ==================================================
+  // Main UI
+  // ==================================================
 
-  initializeChat();
-}, []);
-
-//Main HTML:
   return (
     <div className="chat-page">
-      {/* Left Sidebar */}
-      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
-        <div className="sidebar-header">
+
+      {/* Upload Toast Alert */}
+      {uploadAlert && (
+        <div className={`upload-toast-alert ${uploadAlert.type}`}>
+          <span className="toast-icon">
+            {uploadAlert.type === "uploading" && (
+              <span className="toast-spinner" />
+            )}
+            {uploadAlert.type === "success" && "✅"}
+            {uploadAlert.type === "error" && "❌"}
+          </span>
+          <span className="toast-message">{uploadAlert.message}</span>
           <button
-            className="icon-btn"
-            onClick={() => setSidebarOpen(false)}
+            className="toast-close"
+            onClick={() => {
+              if (alertTimeoutRef.current) clearTimeout(alertTimeoutRef.current);
+              setUploadAlert(null);
+            }}
+            aria-label="Close notification"
           >
             ✕
           </button>
-          <h3>Chats</h3>
         </div>
+      )}
 
-        <button
-          className="new-chat-btn"
-          onClick={createConversation}
-        >
-          + New Chat
-        </button>
+      {/* ========================================= */}
+      {/* Left Sidebar */}
+      {/* ========================================= */}
 
-        <div className="chat-history">
-        {conversations.length === 0 ? (
-          <p style={{ padding: '1rem', color: '#64748b' }}>
-            No chats yet.
-          </p>
-        ) : (
-          conversations.map((conv) => (
-            <button
-              key={conv.id}
-              className="chat-history-item"
-              onClick={() => openConversation(conv.id)}
-            >
-              {conv.title}
-            </button>
-          ))
-        )}
-      </div>
-      </aside>
+      <ChatSidebar
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        conversations={conversations}
+        createConversation={createConversation}
+        openConversation={openConversation}
+        isAuthenticated={isAuthenticated}
+        user={user}
+        handleLogout={handleLogout}
+      />
 
+
+      {/* ========================================= */}
       {/* Main Content */}
+      {/* ========================================= */}
+
       <main className="chat-main">
-        {/* Top Bar */}
-        <header className="chat-topbar">
-          <button
-            className="icon-btn"
-            onClick={() => setSidebarOpen(true)}
-          >
-            ☰
-          </button>
 
-          <div className="brand">
-            <div className="brand-logo">AI</div>
-            <span>Knowledge Assistant</span>
-          </div>
+        <ChatTopbar
+          setSidebarOpen={setSidebarOpen}
+          setDocsOpen={setDocsOpen}
+          isAuthenticated={isAuthenticated}
+          handleLogout={handleLogout}
+        />
 
-          <button className="icon-btn" onClick={() => setDocsOpen(true)}>
-            📁
-          </button>
-        </header>
 
         {/* Login Gate */}
-        {showLoginGate && (
-          <div className="login-gate">
-            <div className="login-card">
-              <h2>Login required</h2>
-              <p>
-                You have used your free queries. Please log in to continue using
-                the assistant.
-              </p>
 
-              <input
-                type="email"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+        <LoginGate
+          showLoginGate={showLoginGate}
+          email={email}
+          password={password}
+          setEmail={setEmail}
+          setPassword={setPassword}
+          handleLogin={handleLogin}
+          handleRegister={handleRegister}
+        />
 
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
 
-              <button className="login-btn" onClick={handleLogin}>
-                Login
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Upload Area */}
 
-        {/* Center Upload Area */}
-        {messages.length===0 &&(<section className="upload-section">
-          <div
-            className="upload-card"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <div className="upload-grid">
-              <div className="grid-cell"></div>
-              <div className="grid-cell"></div>
-              <div className="grid-cell"></div>
-              <div className="grid-cell"></div>
-            </div>
+        <UploadArea
+          messages={messages}
+          fileInputRef={fileInputRef}
+          handleUpload={handleUpload}
+        />
 
-            <div className="upload-icon">⬆️</div>
 
-            <h2>Upload your documents</h2>
+        {/* Chat Messages */}
 
-            <p>
-              Drag & drop PDFs, Word files, notes, or research papers here,
-              or click to browse.
-            </p>
+        <MessageList
+          messages={messages}
+        />
 
-            <button className="primary-btn">Choose Files</button>
 
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              hidden
-              onChange={handleUpload}
-            />
-          </div>
-        </section>)}
-        {messages.length > 0 && (
-  <section className="chat-messages">
-    {messages.map((msg) => (
-      <div key={msg.id} className={`message ${msg.role}`}>
-        <div className="message-bubble">
-          {msg.content}
-        </div>
-
-        {msg.role === 'assistant' &&
-          msg.sources &&
-          msg.sources.length > 0 && (
-            <div className="message-sources">
-              <strong>Sources:</strong>
-              {msg.sources.map((src, idx) => (
-                <div key={idx} className="source-item">
-                  📄 {src.document_title}
-                  {src.page_number
-                    ? ` (Page ${src.page_number})`
-                    : ''}
-                </div>
-              ))}
-            </div>
-          )}
-      </div>
-    ))}
-  </section>
-)}
         {/* Chat Input */}
-        <div className="chat-input-wrapper">
-          <div className="chat-input-bar">
-            <textarea
-              placeholder="Ask a question about your documents..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={1}
-              disabled={showLoginGate}
-            />
 
-            <button
-              className="send-btn"
-              onClick={handleSend}
-              disabled={showLoginGate}
-            >
-              ➤
-            </button>
-          </div>
-        </div>
+        <ChatInput
+          prompt={prompt}
+          setPrompt={setPrompt}
+          handleSend={handleSend}
+          disabled={showLoginGate}
+        />
+
       </main>
 
+
+      {/* ========================================= */}
       {/* Right Documents Sidebar */}
-      <aside className={`docs-sidebar ${docsOpen ? "open" : ""}`}>
-        <div className="docs-header">
-          <h3>Uploaded Documents</h3>
+      {/* ========================================= */}
 
-          <button className="icon-btn" onClick={() => setDocsOpen(false)}>
-            ✕
-          </button>
-        </div>
+      <DocumentsSidebar
+        docsOpen={docsOpen}
+        setDocsOpen={setDocsOpen}
+        uploadedDocs={uploadedDocs}
+        handleUpload={handleUpload}
+      />
 
-        {uploadedDocs.length === 0 ? (
-          <div className="empty-docs">
-            <p>No documents uploaded yet.</p>
-          </div>
-        ) : (
-          <div className="docs-list">
-            {uploadedDocs.map((doc, index) => (
-              <button key={index} className="doc-item">
-                <div className="doc-icon">📄</div>
-
-                <div className="doc-info">
-                  <span className="doc-name">{doc.name}</span>
-                  <span className="doc-size">{doc.size} KB</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </aside>
     </div>
   );
 }

@@ -565,3 +565,315 @@ body,
 .login-btn:hover {
   background: #111827;
 }
+
+
+/* Ultra-compact ChatGPT-like styling */
+.message.assistant .message-bubble {
+  line-height: 1.32;
+  font-size: 15px;
+}
+
+/* Remove almost all heading spacing */
+.message.assistant .message-bubble h1,
+.message.assistant .message-bubble h2,
+.message.assistant .message-bubble h3,
+.message.assistant .message-bubble h4 {
+  margin: 2px 0 0;
+  line-height: 1.2;
+  font-size: 16px;
+}
+
+/* Remove paragraph spacing completely */
+.message.assistant .message-bubble p {
+  margin: 0;
+}
+
+/* Tight lists */
+.message.assistant .message-bubble ol,
+.message.assistant .message-bubble ul {
+  margin: 2px 0;
+  padding-left: 18px;
+}
+
+/* Tight list items */
+.message.assistant .message-bubble li {
+  margin: 0;
+  line-height: 1.28;
+}
+
+/* Remove spacing created by nested paragraphs inside list items */
+.message.assistant .message-bubble li > p {
+  margin: 0;
+  display: inline;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.auth-buttons button {
+  flex: 1;
+  padding: 0.9rem 1rem;
+  border-radius: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-buttons .login-btn {
+  width: auto;
+  border: none;
+  background: #0f172a;
+  color: #fff;
+}
+
+.auth-buttons .login-btn:hover {
+  background: #111827;
+}
+
+.auth-buttons .register-btn {
+  border: 1px solid #dbe3ee;
+  background: #fff;
+  color: #0f172a;
+}
+
+.auth-buttons .register-btn:hover {
+  background: #f8fafc;
+}
+
+/* Sidebar footer */
+.sidebar-footer {
+  margin-top: auto;
+  padding: 1rem;
+  border-top: 1px solid #e2e8f0;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.account-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.account-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.account-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.account-label {
+  flex: 1;
+  text-align: left;
+}
+
+/* Account Popup */
+.account-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 1rem;
+  right: 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 1.25rem;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  animation: popupFade 0.15s ease-out;
+}
+
+@keyframes popupFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.account-popup-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 0.25rem;
+}
+
+.account-popup-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.account-popup-email {
+  font-size: 0.85rem;
+  color: #64748b;
+  word-break: break-word;
+  margin-bottom: 0.5rem;
+}
+
+.account-popup-logout {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-top: 0.25rem;
+}
+
+.account-popup-logout:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+/* Topbar actions & logout */
+.topbar-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topbar-logout-btn {
+  padding: 0.5rem 0.9rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.topbar-logout-btn:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+/* ========================================= */
+/* Upload Toast Alert Popup */
+/* ========================================= */
+
+.upload-toast-alert {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: 9999px;
+  box-shadow: 0 12px 30px -5px rgba(15, 23, 42, 0.35), 0 8px 10px -6px rgba(15, 23, 42, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px);
+  animation: slideDownFade 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.3s ease;
+}
+
+.upload-toast-alert.success {
+  background: #064e3b;
+  border-color: #10b981;
+  color: #ecfdf5;
+}
+
+.upload-toast-alert.error {
+  background: #7f1d1d;
+  border-color: #f87171;
+  color: #fef2f2;
+}
+
+.upload-toast-alert .toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.upload-toast-alert .toast-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+.upload-toast-alert .toast-close {
+  background: transparent;
+  border: none;
+  color: currentColor;
+  opacity: 0.7;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 2px 4px;
+  margin-left: 6px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s;
+}
+
+.upload-toast-alert .toast-close:hover {
+  opacity: 1;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -24px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

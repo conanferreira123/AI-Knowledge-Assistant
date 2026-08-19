@@ -9,27 +9,39 @@ def index_document(document: Document):
     """
     Index an uploaded document.
 
-    Workflow:
+    UPDATED WORKFLOW:
     1. Mark document as processing.
-    2. Run ingestion pipeline.
-    3. Save DocumentChunk rows.
-    4. Mark document as indexed.
-    5. Return the indexed document.
+    2. Run ingestion pipeline and store vectors in Chroma.
+    3. Remove any previous chunks for re-indexing.
+    4. Save fresh DocumentChunk rows in SQLite.
+    5. Mark document as indexed.
+    6. Return the indexed document.
     """
 
-    # Mark processing
+    # ------------------------------------------------------------------
+    # 1. Mark processing
+    # ------------------------------------------------------------------
     document.status = 'processing'
     document.save(update_fields=['status'])
 
     try:
-        # Run ingestion and get LangChain Document chunks back
-        chunks = ingest_file(   #store chunks in VectorDB
+        # ------------------------------------------------------------------
+        # 2. Run ingestion.
+        #
+        # IMPORTANT:
+        # We pass conversation_id so Chroma stores conversation metadata.
+        # This is required for conversation-scoped retrieval.
+        # ------------------------------------------------------------------
+        chunks = ingest_file(
             file_path=document.file.path,
             document_id=document.id,
             conversation_id=document.conversation.id,
         )
 
-        # Remove any previous chunks for re-indexing
+        # ------------------------------------------------------------------
+        # 3. Remove any previous chunks before re-indexing.
+        # This keeps SQLite consistent when a document is reprocessed.
+        # ------------------------------------------------------------------
         DocumentChunk.objects.filter(document=document).delete()
 
         chunk_objects = []
@@ -38,21 +50,29 @@ def index_document(document: Document):
             metadata = chunk.metadata or {}
 
             content = chunk.page_content.strip()
-            #store chunks in SQLite DB
+
+            # ------------------------------------------------------------------
+            # 4. Store chunks in SQLite.
+            #
+            # chunk_index matches the metadata stored in Chroma so we can
+            # trace vectors back to database rows later.
+            # ------------------------------------------------------------------
             chunk_objects.append(
                 DocumentChunk(
                     document=document,
                     chunk_index=i,
                     content=content,
-                    token_count=len(content.split()),  # simple estimate
+                    token_count=len(content.split()),  # simple token estimate
                     page_number=metadata.get('page'),
                 )
             )
 
-        # Bulk insert chunks
+        # Bulk insert chunks for efficiency
         DocumentChunk.objects.bulk_create(chunk_objects)
 
-        # Update document status
+        # ------------------------------------------------------------------
+        # 5. Update document statistics and mark as indexed.
+        # ------------------------------------------------------------------
         document.page_count = len(
             set(
                 c.page_number
@@ -67,6 +87,10 @@ def index_document(document: Document):
         return document
 
     except Exception:
+        # ------------------------------------------------------------------
+        # If anything fails during ingestion or chunk creation, mark the
+        # document as failed so the UI can show the correct status.
+        # ------------------------------------------------------------------
         document.status = 'failed'
         document.save(update_fields=['status'])
         raise
