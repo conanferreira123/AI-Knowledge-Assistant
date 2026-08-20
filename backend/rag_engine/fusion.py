@@ -64,13 +64,19 @@ def rrf_fusion(
         reverse=True,
     )
 
-    return [
+    results = [
         {
             'chunk_id': chunk_id,
             'fused_score': score,
         }
         for chunk_id, score in ranked
     ]
+
+    print('\n=== RRF FUSED RESULTS ===')
+    for item in results[:15]:
+        print(f"Chunk ID: {item['chunk_id']} | Fused Score: {item['fused_score']:.4f}")
+
+    return results
 
 
 if __name__ == '__main__':

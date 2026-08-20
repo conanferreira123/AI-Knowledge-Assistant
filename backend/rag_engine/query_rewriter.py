@@ -1,19 +1,21 @@
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_mistralai import ChatMistralAI
-from dotenv import load_dotenv
-import os
+from langchain_ollama import ChatOllama
 
-load_dotenv()
 
 # ----------------------------------------------------------------------
-# Small, deterministic model for query rewriting.
+# Local Ollama model for query rewriting.
 # Temperature 0 keeps rewrites stable and reproducible.
+#
+# Make sure the model is available locally:
+#
+#     ollama pull mistral
+#
 # ----------------------------------------------------------------------
-llm = ChatMistralAI(
-    model="mistral-small-latest",
-    api_key=os.getenv("MISTRAL_API_KEY"),
-    temperature=0.7,
+llm = ChatOllama(
+    model="llama3.2:1b",
+    temperature=0,
 )
+
 
 PROMPT = ChatPromptTemplate.from_template(
     '''
@@ -48,6 +50,7 @@ def rewrite_query(query: str, history: str | None = None) -> str:
     ----------
     query:
         Current user message.
+
     history:
         Recent conversation history. Can be None for new chats.
 
@@ -58,15 +61,20 @@ def rewrite_query(query: str, history: str | None = None) -> str:
     """
 
     # ------------------------------------------------------------------
-    # Important:
     # New conversations may have no history. Convert None to an empty
     # string so the prompt remains valid and does not contain the text
     # "None".
     # ------------------------------------------------------------------
     history = history or ''
 
+    # ------------------------------------------------------------------
+    # Create the prompt → local Ollama model chain.
+    # ------------------------------------------------------------------
     chain = PROMPT | llm
 
+    # ------------------------------------------------------------------
+    # Invoke the local Mistral model through Ollama.
+    # ------------------------------------------------------------------
     response = chain.invoke(
         {
             'query': query,
@@ -77,7 +85,12 @@ def rewrite_query(query: str, history: str | None = None) -> str:
     return response.content.strip()
 
 
+# ----------------------------------------------------------------------
+# Standalone test
+# ----------------------------------------------------------------------
+
 if __name__ == '__main__':
+
     history = 'User: Explain the transformer architecture.'
     q = 'Explain in detail please'
 

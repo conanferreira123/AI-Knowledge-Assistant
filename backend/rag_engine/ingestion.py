@@ -7,9 +7,8 @@ from langchain_huggingface import HuggingFaceEmbeddings
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / 'data' / 'docs'
+DATA_DIR = BASE_DIR.parent / 'documents'
 VECTORSTORE_DIR = BASE_DIR / 'vectorstore'
-
 
 def load_documents():
     documents = []
@@ -28,7 +27,7 @@ def load_documents():
     return documents
 
 
-def split_documents(documents):
+def split_documents(documents):     #split documents into chunks
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=200,
@@ -58,42 +57,58 @@ def build_vectorstore(chunks):
     print(f'Vector store saved to: {VECTORSTORE_DIR}')
 
 
-def ingest_file(file_path: str, document_id: int, conversation_id: int):
-    """
-    Ingest a single uploaded PDF into Chroma.
+_embeddings = HuggingFaceEmbeddings(
+    model_name='sentence-transformers/all-MiniLM-L6-v2'
+)
 
-    IMPORTANT:
-    We now store conversation_id in vector metadata so retrieval can be
-    restricted to a single chat/conversation. This prevents cross-chat
-    leakage even if old vectors still exist in Chroma.
-    """
+_vectordb = Chroma(
+    persist_directory=str(VECTORSTORE_DIR),
+    embedding_function=_embeddings,
+)
 
+
+def load_and_split_pdf(file_path: str):
+    """
+    Load a PDF document and split it into text chunks.
+    """
     loader = PyPDFLoader(file_path)
     documents = loader.load()
+    return split_documents(documents)
 
-    chunks = split_documents(documents)
 
-    embeddings = HuggingFaceEmbeddings(
-        model_name='sentence-transformers/all-MiniLM-L6-v2'
-    )
+def delete_document_vectors(document_id: int):
+    """
+    Remove existing Chroma vectors for a document_id before re-indexing.
+    Prevents duplicate vectors and dangling metadata.
+    """
+    try:
+        _vectordb._collection.delete(where={'document_id': document_id})
+        _vectordb.persist()
+    except Exception as e:
+        print(f"Notice: Chroma collection delete for document_id={document_id}: {e}")
 
-    vectordb = Chroma(
-        persist_directory=str(VECTORSTORE_DIR),
-        embedding_function=embeddings,
-    )
+
+def store_chunks_in_chroma(chunks: list):
+    """
+    Persist chunks with complete metadata (including chunk_id) into Chroma.
+    """
+    _vectordb.add_documents(chunks)
+    _vectordb.persist()
+
+
+def ingest_file(file_path: str, document_id: int, conversation_id: int):
+    """
+    Legacy single-file ingestion helper.
+    """
+    chunks = load_and_split_pdf(file_path)
 
     for i, chunk in enumerate(chunks):
-        # ------------------------------------------------------------------
-        # NEW: Store document_id, conversation_id and chunk_index in metadata.
-        # These fields are used later by the hybrid retriever and the
-        # conversation-level security filter.
-        # ------------------------------------------------------------------
         chunk.metadata['document_id'] = document_id
         chunk.metadata['conversation_id'] = conversation_id
         chunk.metadata['chunk_index'] = i
 
-    vectordb.add_documents(chunks)
-    vectordb.persist()
+    delete_document_vectors(document_id)
+    store_chunks_in_chroma(chunks)
 
     return chunks
 
@@ -116,3 +131,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

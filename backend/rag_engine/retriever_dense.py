@@ -73,7 +73,6 @@ def dense_retrieve(
     for rank, (doc, score) in enumerate(docs_with_scores, start=1):
         results.append(
             {
-                # chunk_id will be added to metadata after re-indexing
                 'chunk_id': doc.metadata.get('chunk_id'),
                 'content': doc.page_content,
                 'metadata': doc.metadata,
@@ -81,6 +80,13 @@ def dense_retrieve(
                 'rank': rank,
             }
         )
+
+    print('\n=== DENSE RETRIEVAL RESULTS ===')
+    for r in results[:15]:
+        safe_content = r['content'][:120].encode('ascii', errors='ignore').decode('ascii')
+        print(f"Rank {r['rank']} | Chunk ID: {r['chunk_id']} | Score: {r['score']:.4f}")
+        print(safe_content)
+        print('-' * 40)
 
     return results
 
